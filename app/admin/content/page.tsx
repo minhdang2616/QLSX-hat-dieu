@@ -326,6 +326,9 @@ export default function ContentAdminPage() {
                       onChange={handleChange}
                       className="w-full rounded-lg border border-slate-400 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200"
                     >
+                      <option value="home">
+                        Trang chủ
+                      </option>
 
                       <option value="gioi-thieu">
                         Giới thiệu
