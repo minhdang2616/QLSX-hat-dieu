@@ -640,12 +640,6 @@ export default function GioiThieuPage() {
           </div>
 
           <div className="flex flex-wrap gap-6 text-sm text-slate-300">
-            <a
-              href="/"
-              className="transition hover:text-white"
-            >
-              Trang chủ
-            </a>
 
             <a
               href="/gioi-thieu"
