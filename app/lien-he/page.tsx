@@ -209,7 +209,7 @@ export default function LienHePage() {
           </p>
 
 <a
-  href="/gioi-thieu"
+  href="/"
   className="mt-8 inline-block rounded-lg bg-white px-6 py-3 font-bold text-emerald-700 transition hover:bg-slate-100"
 >
   Về trang giới thiệu

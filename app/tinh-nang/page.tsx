@@ -265,7 +265,7 @@ export default function TinhNangPage() {
 
 <div>
   <a
-    href="/gioi-thieu"
+    href="/"
     className="mt-4 inline-block text-sm font-semibold text-emerald-100 underline underline-offset-4 transition hover:text-white"
   >
     ← Quay về trang giới thiệu

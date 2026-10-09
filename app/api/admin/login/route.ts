@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { API_URL } from "@/lib/api";
 
+// Validates credentials against the .NET API, then stores the admin session cookie.
 export async function POST(req: Request) {
   try {
     const { username, password } = await req.json();
@@ -13,55 +13,39 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        username,
-      },
+    const apiRes = await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+      cache: "no-store",
     });
 
-    if (!user) {
+    const data = await apiRes.json().catch(() => null);
+
+    if (!apiRes.ok) {
       return NextResponse.json(
-        { error: "Tài khoản hoặc mật khẩu không đúng" },
-        { status: 401 }
+        { error: data?.error || "Đăng nhập thất bại" },
+        { status: apiRes.status }
       );
     }
 
-    const validPassword = await bcrypt.compare(
-      password,
-      user.password
-    );
-
-    if (!validPassword) {
-      return NextResponse.json(
-        { error: "Tài khoản hoặc mật khẩu không đúng" },
-        { status: 401 }
-      );
-    }
-
-    if (user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Tài khoản không có quyền Admin" },
-        { status: 403 }
-      );
-    }
-
-    const response = NextResponse.json({
-      success: true,
-    });
-
-    response.cookies.set("admin_session", String(user.id), {
+    const response = NextResponse.json({ success: true });
+    const opts = {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "lax" as const,
       secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 8,
       path: "/",
-    });
+    };
+
+    response.cookies.set("admin_session", String(data.id), opts);
+    response.cookies.set("admin_name", encodeURIComponent(data.name || data.username), opts);
 
     return response;
   } catch {
     return NextResponse.json(
-      { error: "Có lỗi xảy ra" },
-      { status: 500 }
+      { error: "Không kết nối được máy chủ API" },
+      { status: 502 }
     );
   }
 }

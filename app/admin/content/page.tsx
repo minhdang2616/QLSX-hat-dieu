@@ -2,6 +2,13 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+type ContentItem = {
+  id?: number;
+  title: string;
+  description: string | null;
+  sortOrder: number;
+};
+
 type Content = {
   id: number;
   page: string;
@@ -10,7 +17,12 @@ type Content = {
   description: string | null;
   image: string | null;
   sortOrder: number;
+  items: ContentItem[];
 };
+
+type FormItem = { title: string; description: string };
+
+const SECTIONS = ["hero", "about", "warehouse", "production", "business", "report", "cta"];
 
 // Reads a response safely. If the server sends HTML (404 page, redirect to
 // login, crash page...) instead of JSON, we show a useful error instead of
@@ -34,6 +46,7 @@ const initialForm = {
   description: "",
   image: "",
   sortOrder: 1,
+  items: [] as FormItem[],
 };
 
 export default function ContentAdminPage() {
@@ -99,6 +112,39 @@ export default function ContentAdminPage() {
     setEditingId(null);
   }
 
+  function addItem() {
+    setForm((prev) => ({
+      ...prev,
+      items: [...prev.items, { title: "", description: "" }],
+    }));
+  }
+
+  function updateItem(index: number, field: keyof FormItem, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((it, i) =>
+        i === index ? { ...it, [field]: value } : it
+      ),
+    }));
+  }
+
+  function removeItem(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index),
+    }));
+  }
+
+  function moveItem(index: number, dir: -1 | 1) {
+    setForm((prev) => {
+      const target = index + dir;
+      if (target < 0 || target >= prev.items.length) return prev;
+      const items = [...prev.items];
+      [items[index], items[target]] = [items[target], items[index]];
+      return { ...prev, items };
+    });
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
@@ -125,6 +171,13 @@ export default function ContentAdminPage() {
         body: JSON.stringify({
           ...form,
           image: form.image.trim(),
+          items: form.items
+            .filter((it) => it.title.trim())
+            .map((it, i) => ({
+              title: it.title.trim(),
+              description: it.description.trim(),
+              sortOrder: i + 1,
+            })),
         }),
       });
 
@@ -166,6 +219,10 @@ export default function ContentAdminPage() {
       description: content.description || "",
       image: content.image || "",
       sortOrder: content.sortOrder,
+      items: (content.items ?? []).map((it) => ({
+        title: it.title,
+        description: it.description || "",
+      })),
     });
 
     window.scrollTo({
@@ -243,15 +300,9 @@ export default function ContentAdminPage() {
               Nội dung website
             </a>
 
-            <a
-              href="/admin/users"
-              className="mb-2 block rounded-lg px-4 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-800"
-            >
-              Tài khoản
-            </a>
 
 	    <a
-	      href="/gioi-thieu"
+	      href="/"
 	      className="mt-6 block rounded-lg border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-800"
 	    >
 	      Xem website
@@ -327,12 +378,9 @@ export default function ContentAdminPage() {
                       className="w-full rounded-lg border border-slate-400 bg-white px-4 py-3 text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200"
                     >
                       <option value="home">
-                        Trang chủ
+                        Trang chủ (Giới thiệu)
                       </option>
 
-                      <option value="gioi-thieu">
-                        Giới thiệu
-                      </option>
 
                       <option value="tinh-nang">
                         Tính năng
@@ -356,11 +404,17 @@ export default function ContentAdminPage() {
 
                     <input
                       name="section"
+                      list="section-options"
                       value={form.section}
                       onChange={handleChange}
                       placeholder="Ví dụ: hero, about, warehouse"
                       className="w-full rounded-lg border border-slate-400 bg-white px-4 py-3 text-slate-950 placeholder:text-slate-500 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200"
                     />
+                    <datalist id="section-options">
+                      {SECTIONS.map((sec) => (
+                        <option key={sec} value={sec} />
+                      ))}
+                    </datalist>
                   </div>
 
                   {/* TITLE */}
@@ -433,6 +487,93 @@ export default function ContentAdminPage() {
                             }}
                           />
                         </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ITEMS */}
+                  <div className="md:col-span-2">
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className="block text-sm font-bold text-slate-900">
+                        Danh sách mục con (thẻ, bước, điểm nổi bật)
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={addItem}
+                        className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                      >
+                        + Thêm mục
+                      </button>
+                    </div>
+
+                    <p className="mb-3 text-sm text-slate-600">
+                      Với section &quot;about&quot;: tiêu đề là nhãn, mô tả là con số hiển thị (ví dụ 01).
+                    </p>
+
+                    {form.items.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-slate-400 p-4 text-center text-sm text-slate-600">
+                        Chưa có mục con.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {form.items.map((item, index) => (
+                          <div
+                            key={index}
+                            className="rounded-lg border border-slate-300 bg-slate-50 p-4"
+                          >
+                            <div className="mb-3 flex items-center justify-between">
+                              <span className="text-sm font-bold text-slate-800">
+                                Mục {index + 1}
+                              </span>
+
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => moveItem(index, -1)}
+                                  disabled={index === 0}
+                                  className="rounded border border-slate-400 bg-white px-2 py-1 text-sm font-bold text-slate-800 disabled:opacity-40"
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveItem(index, 1)}
+                                  disabled={index === form.items.length - 1}
+                                  className="rounded border border-slate-400 bg-white px-2 py-1 text-sm font-bold text-slate-800 disabled:opacity-40"
+                                >
+                                  ↓
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(index)}
+                                  className="rounded bg-red-600 px-2 py-1 text-sm font-bold text-white hover:bg-red-700"
+                                >
+                                  Xóa
+                                </button>
+                              </div>
+                            </div>
+
+                            <input
+                              value={item.title}
+                              onChange={(e) =>
+                                updateItem(index, "title", e.target.value)
+                              }
+                              placeholder="Tiêu đề mục"
+                              className="mb-3 w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-slate-950 placeholder:text-slate-500 outline-none focus:border-emerald-600"
+                            />
+
+                            <textarea
+                              value={item.description}
+                              onChange={(e) =>
+                                updateItem(index, "description", e.target.value)
+                              }
+                              rows={2}
+                              placeholder="Mô tả mục"
+                              className="w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-slate-950 placeholder:text-slate-500 outline-none focus:border-emerald-600"
+                            />
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -577,6 +718,11 @@ export default function ContentAdminPage() {
 
                           <td className="max-w-xs px-4 py-4 font-bold text-slate-950">
                             {content.title}
+                            {(content.items?.length ?? 0) > 0 && (
+                              <span className="ml-2 rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                                {content.items.length} mục
+                              </span>
+                            )}
                           </td>
 
                           <td className="px-4 py-4 text-center font-semibold text-slate-800">

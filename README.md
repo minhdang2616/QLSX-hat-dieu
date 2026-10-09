@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# QLSX Hạt Điều
 
-## Getting Started
+- **Frontend**: Next.js (root of this repo) — trang giới thiệu nằm ở `/` (trang chủ), khu vực quản trị ở `/admin`.
+- **Backend**: ASP.NET Core 8 Web API + PostgreSQL (`backend/QlsxHatDieu.Api`).
 
-First, run the development server:
+## Chạy backend
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd backend/QlsxHatDieu.Api
+# sửa ConnectionStrings:Default trong appsettings.json (hoặc biến môi trường ConnectionStrings__Default)
+dotnet run --urls http://localhost:5000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Lần chạy đầu tự tạo bảng và dữ liệu mẫu (tài khoản `admin`, mật khẩu mặc định `123`, đổi bằng `Seed:AdminPassword`).
+CORS cho phép các domain trong `Cors:Origins`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Method | URL | Mô tả |
+| --- | --- | --- |
+| GET | `/api/content?page=home` | Nội dung của một trang (kèm `items`) |
+| POST / PUT / DELETE | `/api/content[/{id}]` | Thêm / sửa / xóa nội dung |
+| POST | `/api/auth/login` | Đăng nhập admin |
+| GET | `/api/stats` | Số liệu cho dashboard |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Chạy frontend
 
-## Learn More
+```bash
+cp .env.example .env.local   # API_URL=http://localhost:5000
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Khi deploy (Vercel/Cloudflare) đặt biến môi trường `API_URL` trỏ tới địa chỉ backend.
+Trình duyệt gọi `/api/*`, Next.js chuyển tiếp (rewrite) sang backend.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Cấu trúc nội dung
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`Content` = một section của một trang (`page` + `section`), mỗi section có `items` (các thẻ/bước/điểm nổi bật) chỉnh sửa tại `/admin/content`.
+Các section của trang chủ: `hero`, `about`, `warehouse`, `production`, `business`, `report`, `cta`.

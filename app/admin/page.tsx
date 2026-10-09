@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getStats } from "@/lib/api";
 
 export default async function AdminPage() {
   const cookieStore = await cookies();
@@ -10,15 +10,13 @@ export default async function AdminPage() {
     redirect("/admin/login");
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: Number(session.value),
-    },
-  });
-
-  if (!user || user.role !== "ADMIN") {
-    redirect("/admin/login");
-  }
+  const rawName = cookieStore.get("admin_name")?.value ?? "admin";
+  let displayName = rawName;
+  try {
+    displayName = decodeURIComponent(rawName);
+  } catch {}
+  const user = { name: displayName, username: displayName };
+  const stats = await getStats();
 
   return (
     <div className="min-h-screen bg-slate-100 flex">
@@ -58,13 +56,6 @@ export default async function AdminPage() {
             <span>Nội dung website</span>
           </a>
 
-          <a
-            href="/admin/users"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"
-          >
-            <span>♙</span>
-            <span>Tài khoản</span>
-          </a>
 
           <div className="pt-6 pb-2 px-4 text-xs uppercase text-slate-500">
             Hệ thống
@@ -162,7 +153,7 @@ export default async function AdminPage() {
               </p>
 
               <p className="text-3xl font-bold text-slate-900 mt-2">
-                0
+                {stats.contentCount}
               </p>
 
               <p className="text-xs text-emerald-600 mt-2">
@@ -176,7 +167,7 @@ export default async function AdminPage() {
               </p>
 
               <p className="text-3xl font-bold text-slate-900 mt-2">
-                1
+                {stats.userCount}
               </p>
 
               <p className="text-xs text-slate-500 mt-2">
@@ -224,22 +215,6 @@ export default async function AdminPage() {
               </p>
             </a>
 
-            <a
-              href="/admin/users"
-              className="bg-white border rounded-xl p-6 hover:border-emerald-500 hover:shadow-sm transition"
-            >
-              <div className="w-11 h-11 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xl mb-4">
-                ♙
-              </div>
-
-              <h3 className="font-semibold text-slate-900">
-                Quản lý tài khoản
-              </h3>
-
-              <p className="text-sm text-slate-500 mt-1">
-                Quản lý tài khoản và quyền truy cập.
-              </p>
-            </a>
 
           </div>
 
