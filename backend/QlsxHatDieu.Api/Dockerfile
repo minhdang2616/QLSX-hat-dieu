@@ -16,4 +16,4 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
     DOTNET_EnableWriteXorExecute=0 \
     DOTNET_TieredPGO=0 \
     DOTNET_gcConcurrent=0
-ENTRYPOINT ["sh", "-c", "echo PORT=$PORT; dotnet --info | head -15; echo STARTING_APP; ASPNETCORE_URLS=http://+:${PORT:-8080} exec dotnet QlsxHatDieu.Api.dll"]ENTRYPOINT ["sh", "-c", "echo PORT=$PORT; dotnet --info | head -15; echo STARTING_APP; ASPNETCORE_URLS=http://+:${PORT:-8080} exec dotnet QlsxHatDieu.Api.dll"]
+CMD echo "PORT=$PORT"; dotnet --info | head -15; echo STARTING_APP; ASPNETCORE_URLS=http://+:${PORT:-8080} exec dotnet QlsxHatDieu.Api.dll
