@@ -1,13 +1,16 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using QlsxHatDieu.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
 // Accepts either an Npgsql string or a postgres:// URI (as given by Neon, Supabase, Railway...).
 static string NormalizeConnectionString(string? cs)
 {
     if (string.IsNullOrWhiteSpace(cs)) return "";
+    cs = cs.Trim().Trim('"', '\'');
     if (!cs.StartsWith("postgres://") && !cs.StartsWith("postgresql://")) return cs;
 
     var uri = new Uri(cs);
@@ -18,8 +21,25 @@ static string NormalizeConnectionString(string? cs)
            "SSL Mode=Require;Trust Server Certificate=true";
 }
 
-builder.Services.AddDbContext<AppDbContext>(o =>
-    o.UseNpgsql(NormalizeConnectionString(builder.Configuration.GetConnectionString("Default"))));
+var rawConnection = builder.Configuration.GetConnectionString("Default");
+var connection = NormalizeConnectionString(rawConnection);
+
+// ---- Startup diagnostics (the password is never printed) ----
+var envValue = Environment.GetEnvironmentVariable("ConnectionStrings__Default");
+Console.WriteLine($"[DB] Env var ConnectionStrings__Default present: {!string.IsNullOrWhiteSpace(envValue)}");
+Console.WriteLine($"[DB] Raw value starts with: {(string.IsNullOrEmpty(rawConnection) ? "(empty)" : rawConnection[..Math.Min(rawConnection.Length, 12)])}");
+try
+{
+    var b = new NpgsqlConnectionStringBuilder(connection);
+    Console.WriteLine($"[DB] Using Host={b.Host} Port={b.Port} Database={b.Database} Username={b.Username} SslMode={b.SslMode} PasswordLength={b.Password?.Length ?? 0}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[DB] Connection string cannot be parsed: {ex.Message}");
+}
+Console.WriteLine($"[ENV] PORT={Environment.GetEnvironmentVariable("PORT")}");
+
+builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(connection));
 
 // Allowed browser origins (the Next.js site). Comma separated in config / env var Cors__Origins.
 var origins = (builder.Configuration["Cors:Origins"] ?? "http://localhost:3000")
@@ -29,11 +49,20 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(origins).All
 var app = builder.Build();
 
 // Create tables + seed default data on first run.
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
     DbSeeder.Seed(db, app.Configuration);
+    Console.WriteLine("[DB] Database ready.");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[DB] STARTUP FAILED: {ex.GetType().Name}: {ex.Message}");
+    for (var inner = ex.InnerException; inner != null; inner = inner.InnerException)
+        Console.WriteLine($"[DB]   caused by {inner.GetType().Name}: {inner.Message}");
+    throw;
 }
 
 app.UseCors();
