@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using QlsxHatDieu.Api.Data;
 
@@ -53,7 +55,21 @@ try
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+
+    // EnsureCreated() silently does nothing when the database already contains other tables,
+    // so create our tables explicitly.
+    var creator = db.GetService<IRelationalDatabaseCreator>();
+    if (!creator.Exists()) creator.Create();
+    try
+    {
+        creator.CreateTables();
+        Console.WriteLine("[DB] Tables created.");
+    }
+    catch (PostgresException ex) when (ex.SqlState == "42P07") // duplicate_table: already created earlier
+    {
+        Console.WriteLine("[DB] Tables already exist.");
+    }
+
     DbSeeder.Seed(db, app.Configuration);
     Console.WriteLine("[DB] Database ready.");
 }
